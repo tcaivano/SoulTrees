@@ -1,0 +1,264 @@
+﻿@page "/update-item/{id}"
+@using SoulTrees.Managers
+@using SoulTrees.Models
+@using SoulTrees.Enumerations
+@using Radzen.Blazor
+@inject IItemManager _itemManager;
+@inject NavigationManager NavigationManager
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>Item</PageTitle>
+
+
+@if (!_isReady)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    if (Id.Equals("new"))
+    {
+        <h1>New Item</h1>
+
+        <p>Create a new Item.</p>
+    }
+    else
+    {
+        <h1>Update Item</h1>
+    }
+
+    <EditForm Model="_item"  OnSubmit="@HandleSubmit">
+        Name: <br/>
+        <InputText @bind-Value="_item.Name"></InputText>
+        <br />
+        Type: <br />
+        <InputSelect @bind-Value="_item.Type">
+            <option value="">Select Type...</option>
+            <option value="@EItemType.Weapon">Weapon</option>
+            <option value="@EItemType.Trinket">Trinket</option>
+            <option value="@EItemType.Armor">Armor</option>
+            <option value="@EItemType.Misc">Misc</option>
+        </InputSelect>
+        <br />
+        Description: <br />
+        <RadzenHtmlEditor @bind-Value="_item.Description" />
+
+        <br />
+
+
+        <div class="tree-container">
+            @foreach (var subTree in _item.BaseTrees)
+            {
+                <div class="tree">
+                    Type: <b>@subTree.Type</b>
+                    <br />
+                    @foreach (var subSkill in subTree.Skills)
+                    {
+                        <div class="item">
+                            Name:
+                            <br />
+                            <InputText @bind-Value="subSkill.Name"></InputText>
+                            <br />
+                            Description:
+                            <br />
+                            <RadzenHtmlEditor @bind-Value="subSkill.Description" />
+                            <br />
+                            Cost:
+                            <br />
+                            <InputNumber @bind-Value="subSkill.Cost"></InputNumber>
+                            <br />
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <br />
+        <br />
+        <br />
+        <br />
+
+        <div class="tree-container">
+            @foreach (var subTree in _item.LowTrees)
+            {
+                <div class="tree">
+                    Type: <b>@subTree.Type</b>
+                    <br />
+
+                    @foreach (var subSkill in subTree.Skills)
+                    {
+                        <div class="item">
+                            Name:
+                            <br />
+                            <InputText @bind-Value="subSkill.Name"></InputText>
+                            <br />
+                            Description:
+                            <br />
+                            <RadzenHtmlEditor @bind-Value="subSkill.Description" />
+                            <br />
+                            Cost:
+                            <br />
+                            <InputNumber @bind-Value="subSkill.Cost"></InputNumber>
+                            <br />
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <br />
+        <br />
+        <br />
+        <br />
+
+        <div class="tree-container">
+            @foreach (var subTree in _item.MidTrees)
+            {
+                <div class="tree">
+                    Type: <b>@subTree.Type</b>
+
+                    @foreach (var subSkill in subTree.Skills)
+                    {
+                        <div class="item">
+                            Name:
+                            <br />
+                            <InputText @bind-Value="subSkill.Name"></InputText>
+                            <br />
+                            Description:
+                            <br />
+                            <RadzenHtmlEditor @bind-Value="subSkill.Description" />
+                            <br />
+                            Cost:
+                            <br />
+                            <InputNumber @bind-Value="subSkill.Cost"></InputNumber>
+                            <br />
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <br />
+        <br />
+        <br />
+        <br />
+
+        <div class="tree-container">
+            @foreach (var subTree in _item.HighTrees)
+            {
+                <div class="tree">
+                    Type: <b>@subTree.Type</b>
+
+                    @foreach (var subSkill in subTree.Skills)
+                    {
+                        <div class="item">
+                            Name:
+                            <br />
+                            <InputText @bind-Value="subSkill.Name"></InputText>
+                            <br />
+                            Description:
+                            <br />
+                            <RadzenHtmlEditor @bind-Value="subSkill.Description" />
+                            <br />
+                            Cost:
+                            <br />
+                            <InputNumber @bind-Value="subSkill.Cost"></InputNumber>
+                            <br />
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+        <div class="footer">
+            <button class="btn btn-primary" type="submit">Submit</button>
+        </div>
+
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public string Id { get; set; }
+
+    private Item _item;
+    private bool _isReady = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Id.Equals("new"))
+        {
+            _item = await _itemManager.GetItem(Int32.Parse(Id));
+            _isReady = true;
+        }
+        else InitItem();
+    }
+
+    private async Task HandleSubmit()
+    {
+        var result = false;
+        if (Id.Equals("new"))
+        {
+            result = await _itemManager.AddItem(_item);
+        }
+        else
+        {
+            result = await _itemManager.UpdateItem(_item);
+        }
+        if (result)
+            NavigationManager.NavigateTo($"/display-item/{_item.Id}");
+    }
+
+    private void InitItem()
+    {
+        _item = new Item();
+        _isReady = false;
+        CreateTrees(2, 3, 0, ETreeTier.Base, new [] { ETreeType.Enhancement, ETreeType.None });
+        CreateTrees(3, 10, 1, ETreeTier.Low, new[] { ETreeType.Mangle, ETreeType.Manifest, ETreeType.Meld });
+        CreateTrees(3, 5, 3, ETreeTier.Medium, new[] { ETreeType.Law, ETreeType.Chaos }, true);
+        CreateTrees(1, 3, 10, ETreeTier.High, new[] { ETreeType.Godslayer }, true);
+        _isReady = true;
+    }
+
+    private void CreateTrees(int numberOfTrees, int skillsPerTree, int baseMod, ETreeTier tier, ETreeType[] types, bool obscure = false)
+    {
+        List<Tree> treesToModify;
+        switch (tier)
+        {
+            case ETreeTier.Base:
+                treesToModify = _item.BaseTrees;
+                break;
+            case ETreeTier.Low:
+                treesToModify = _item.LowTrees;
+                break;
+            case ETreeTier.Medium:
+                treesToModify = _item.MidTrees;
+                break;
+            case ETreeTier.High:
+                treesToModify = _item.HighTrees;
+                break;
+            default:
+                throw new NotImplementedException();
+        }
+
+        for (int i = 0; i < numberOfTrees; i++)
+        {
+            var tree = new Tree();
+            for (int j = 0; j < skillsPerTree; j++)
+            {
+                var skill = new Skill() { Tier = j + 1 };
+                skill.Cost = skill.Tier * baseMod;
+                if (obscure)
+                {
+                    skill.Description = "???";
+                    skill.Name = "???";
+                }
+                tree.Skills.Add(skill);
+            }
+
+            if (obscure) tree.Type = ETreeType.Unknown;
+            else tree.Type = types[i];
+
+            treesToModify.Add(tree);
+        }
+    }
+}

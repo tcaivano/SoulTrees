@@ -1,0 +1,266 @@
+﻿@page "/display-item/{id}"
+@using SoulTrees.Data
+@using SoulTrees.Models
+@using SoulTrees.Managers;
+@inject IItemManager _itemManager;
+@inject NavigationManager NavigationManager;
+@inject NotificationService _notificationService;
+@attribute [Authorize(Roles = "Admin, User")]
+
+<PageTitle>Tree</PageTitle>
+
+<RadzenNotification />
+
+@if (_item == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <h1>@_item.Name</h1>
+    <p>@_item.Type</p>
+
+    <span>
+        @((MarkupString)_item.Description)
+    </span>
+    <br/>
+
+
+    <div class="tree-container">
+        @foreach (var tree in _item.BaseTrees)
+        {
+            <div class="tree">
+                <div>@tree.Type</div>
+                @foreach (var item in tree.Skills)
+                {
+                    <div class="skill-container @(item.IsEnabled ? "enabled" : "disabled") @(item.IsPurchased ? "isPurchased" : "")" @onclick="() => ToggleBuySkill(item)">
+                        <h5>@item.Name - @item.Cost Souls</h5>
+                        <div class="item" data-souls="@item.Cost">@((MarkupString)item.Description)</div>
+                    </div>
+                }
+            </div>
+        }
+        <br />
+        <br />
+        <br />
+        <br />
+        @foreach (var tree in _item.LowTrees)
+        {
+            <div class="tree">
+                <div>@tree.Type</div>
+                @foreach (var item in tree.Skills)
+                {
+                    <div class="skill-container @(item.IsEnabled ? "enabled" : "disabled") @(item.IsPurchased ? "isPurchased" : "")" @onclick="() => ToggleBuySkill(item)">
+                        <h5>@item.Name - @item.Cost Souls</h5>
+                        <div class="item" data-souls="@item.Cost">@((MarkupString)item.Description)</div>
+                    </div>
+                }
+            </div>
+        }
+        <br />
+        <br />
+        <br />
+        <br />
+        @foreach (var tree in _item.MidTrees)
+        {
+            <div class="tree">
+                <div>@tree.Type</div>
+                @foreach (var item in tree.Skills)
+                {
+                    <div class="skill-container @(item.IsEnabled ? "enabled" : "disabled") @(item.IsPurchased ? "isPurchased" : "")" @onclick="() => ToggleBuySkill(item)">
+                        <h5>@item.Name - @item.Cost Souls</h5>
+                        <div class="item" data-souls="@item.Cost">@((MarkupString)item.Description)</div>
+                    </div>
+                }
+            </div>
+        }
+        <br />
+        <br />
+        <br />
+        <br />
+        @foreach (var tree in _item.HighTrees)
+        {
+            <div class="tree">
+                <div>@tree.Type</div>
+                @foreach (var item in tree.Skills)
+                {
+                    <div class="skill-container @(item.IsEnabled ? "enabled" : "disabled") @(item.IsPurchased ? "isPurchased" : "")" @onclick="() => ToggleBuySkill(item)">
+                        <h5>@item.Name - @item.Cost Souls</h5>
+                        <div class="item" data-souls="@item.Cost">@((MarkupString)item.Description)</div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+    <div class="footer">
+        <AuthorizeView Roles="Admin">
+            <button class="btn btn-primary" @onclick="EditItem">Edit</button>
+        </AuthorizeView>
+        <button class="btn btn-primary" @onclick="CancelChanges">Cancel</button>
+        <span class="soulSpan">Total Souls: @_totalSouls  |  Needed Souls for Change: @_neededSouls </span>
+        <button class="btn btn-primary" @onclick="SaveItem">Save</button>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string Id { get; set; }
+
+    private Item _item;
+    private int _totalSouls = 0;
+    private int _neededSouls = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _item = await _itemManager.GetItem(Int32.Parse(Id));
+        SetEnabledSkills();
+        SetInitialTotal();
+    }
+
+    private void SetInitialTotal()
+    {
+        GetTotalFromTrees(_item.BaseTrees);
+        GetTotalFromTrees(_item.LowTrees);
+        GetTotalFromTrees(_item.MidTrees);
+        GetTotalFromTrees(_item.HighTrees);
+    }
+
+    private void CancelChanges()
+    {
+        NavigationManager.NavigateTo($"/display-item/{Id}", true);
+    }
+
+    private void GetTotalFromTrees(List<Tree> trees)
+    {
+        foreach(var tree in trees)
+        {
+            foreach (var skill in tree.Skills)
+            {
+                if (skill.IsPurchased) _totalSouls += skill.Cost;
+            }
+        }
+    }
+
+    private void EditItem()
+    {
+        NavigationManager.NavigateTo($"/update-item/{Id}");
+    }
+
+    private async Task SaveItem()
+    {
+        if (await _itemManager.UpdateItem(_item))
+        {
+            _notificationService.Notify(severity: NotificationSeverity.Success, summary: "Updated Item");
+            _neededSouls = 0;
+        }
+        else
+        {
+            _notificationService.Notify(severity: NotificationSeverity.Error, summary: "Item not updated");
+        }
+    }
+
+    private void ToggleBuySkill(Skill skill)
+    {
+        if (skill.IsEnabled)
+        {
+            if (skill.IsPurchased)
+            {
+                _totalSouls -= skill.Cost;
+                _neededSouls -= skill.Cost;
+                skill.IsPurchased = false;
+            }
+            else
+            {
+                _totalSouls += skill.Cost;
+                _neededSouls += skill.Cost;
+                skill.IsPurchased = true;
+            }
+        }
+        SetEnabledSkills();
+    }
+
+    private void SetEnabledSkills()
+    {
+        foreach (var tree in _item.BaseTrees)
+        {
+            foreach (var skill in tree.Skills)
+            {
+                skill.IsEnabled = true;
+            }
+        }
+
+        var isComplete = UpdateTreeColections(_item.LowTrees);
+
+        if (isComplete)
+        {
+            UpdateTreeColections(_item.MidTrees);
+            UpdateTreeColections(_item.HighTrees);
+        }
+        else
+        {
+            DisableAllInTrees(_item.MidTrees);
+            DisableAllInTrees(_item.HighTrees);
+        }
+    }
+
+    private void DisableAllInTrees(List<Tree> trees)
+    {
+        foreach (var tree in trees)
+        {
+            foreach (var skill in tree.Skills)
+            {
+                if (skill.IsPurchased)
+                {
+                    _totalSouls -= skill.Cost;
+                    _neededSouls -= skill.Cost;
+                }
+
+                skill.IsPurchased = false;
+                skill.IsEnabled = false;
+            }
+        }
+    }
+
+    private bool UpdateTreeColections(List<Tree> trees)
+    {
+        var result = false;
+
+        foreach (var tree in trees)
+        {
+            var prevIsPurchased = true;
+            foreach (var skill in tree.Skills)
+            {
+                if (prevIsPurchased)
+                {
+                    skill.IsEnabled = true;
+                    prevIsPurchased = skill.IsPurchased;
+                }
+                else
+                {
+                    if (skill.IsPurchased)
+                    {
+                        _totalSouls -= skill.Cost;
+                        _neededSouls -= skill.Cost;
+                    }
+
+                    skill.IsPurchased = false;
+                    skill.IsEnabled = false;
+                }
+            }
+            if (tree.Skills.Where(x => !x.IsPurchased).Count() == 0) result = true;
+        }
+
+
+        var treeWithPurchases = trees.Where(x => x.Skills.Where(x => x.IsPurchased).Any()).SingleOrDefault();
+
+        if (treeWithPurchases != null)
+        {
+            foreach (var tree in trees.Where(x => x != treeWithPurchases))
+            {
+                foreach (var skill in tree.Skills) skill.IsEnabled = false;
+            }
+        }
+
+        return result;
+    }
+}

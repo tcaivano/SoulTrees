@@ -1,0 +1,74 @@
+﻿@page "/items"
+@using SoulTrees.Managers
+@using SoulTrees.Models
+@inject IItemManager _itemManager
+@inject NavigationManager NavigationManager
+@attribute [Authorize(Roles = "Admin, User")]
+
+
+<PageTitle>Items</PageTitle>
+<h3>Items</h3>
+
+@if (_items == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Type</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in _items)
+            {
+                <tr class="row-hover" @onclick="() => NavigateToDetails(item.Id)">
+                    <td>@item.Name</td>
+                    <td>@item.Type</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <button class="btn btn-primary" @onclick="LoadPrevious" disabled="@IsFirstPage">Previous</button>
+    <button class="btn btn-primary" @onclick="LoadNext" disabled="@IsLastPage">Next</button>
+}
+
+@code { 
+    private const int ITEMS_PER_PAGE = 20;
+    private List<Item> _items;
+    private int currentPage = 0;
+    private bool IsFirstPage => currentPage == 0;
+    private bool IsLastPage => _items.Count() < ITEMS_PER_PAGE;
+
+    protected override void OnInitialized()
+    {
+        LoadItems();
+    }
+
+    private async Task LoadItems()
+    {
+        _items = await _itemManager.GetItems(currentPage, ITEMS_PER_PAGE);
+        StateHasChanged();
+    }
+
+    private void LoadNext()
+    {
+        currentPage++;
+        LoadItems();
+    }
+
+    private void LoadPrevious()
+    {
+        currentPage--;
+        LoadItems();
+    }
+
+    private void NavigateToDetails(int id)
+    {
+        NavigationManager.NavigateTo($"/display-item/{id}");
+    }
+}
+    
