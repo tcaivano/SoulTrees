@@ -8,22 +8,28 @@ namespace SoulTrees.Repositories
     {
 
         private readonly ApplicationDbContext _context;
+        private readonly  ISkillRepository _skillRepository;
 
-        public ItemRepository(ApplicationDbContext context)
+        public ItemRepository(ApplicationDbContext context, ISkillRepository skillRepository)
         {
             _context = context;
+            _skillRepository = skillRepository; 
         }
 
         public bool AddItem(Item item)
         {
             _context.Add(item);
-            return _context.SaveChangesResult();
+            var result = _context.SaveChangesResult();
+            _skillRepository.RefreshSkills();
+            return result;
         }
 
         public bool UpdateItem(Item item)
         {
             _context.Update(item);
-            return _context.SaveChangesResult();
+            var result = _context.SaveChangesResult();
+            _skillRepository.RefreshSkills();
+            return result;
         }
 
         public Item GetItem(int id)

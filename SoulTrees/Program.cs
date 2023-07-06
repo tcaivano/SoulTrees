@@ -11,6 +11,7 @@ using Radzen;
 using SoulTrees.Areas.Identity;
 using SoulTrees.Data;
 using SoulTrees.Managers;
+using SoulTrees.Models;
 using SoulTrees.Repositories;
 using SoulTrees.Services;
 using System.Net;
@@ -19,20 +20,23 @@ using System.Net;
 var builder = WebApplication.CreateBuilder(args);
 
 
-string port = builder.Configuration.GetValue<string>("KestrelPort");
-builder.WebHost.UseKestrel(options =>
+if (builder.Configuration.GetValue<bool>("IsProduction"))
 {
-    options.Limits.MaxConcurrentConnections = 100;
-    options.Limits.MaxConcurrentUpgradedConnections = 100;
-    options.Limits.MaxRequestBodySize = 52428800;
-    options.Listen(IPAddress.Loopback, 5000);
-    options.Listen(IPAddress.Any, int.Parse(port.Remove(0, 1)));
-    options.Listen(IPAddress.Any, int.Parse(port.Remove(0, 1)) + 1, listenOptions =>
+    string port = builder.Configuration.GetValue<string>("KestrelPort");
+    builder.WebHost.UseKestrel(options =>
     {
-        listenOptions.UseHttps("certificate.pfx", builder.Configuration.GetValue<string>("KestrelCertPassword"));
-    });
-})
-    .UseContentRoot(Directory.GetCurrentDirectory());
+        options.Limits.MaxConcurrentConnections = 100;
+        options.Limits.MaxConcurrentUpgradedConnections = 100;
+        options.Limits.MaxRequestBodySize = 52428800;
+        options.Listen(IPAddress.Loopback, 5000);
+        options.Listen(IPAddress.Any, int.Parse(port.Remove(0, 1)));
+        options.Listen(IPAddress.Any, int.Parse(port.Remove(0, 1)) + 1, listenOptions =>
+        {
+            listenOptions.UseHttps("certificate.pfx", builder.Configuration.GetValue<string>("KestrelCertPassword"));
+        });
+    })
+        .UseContentRoot(Directory.GetCurrentDirectory());
+}
 
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("MariaDb") ?? throw new InvalidOperationException("Connection string 'MariaDb' not found.");
@@ -54,6 +58,8 @@ builder.Services.AddTransient<IItemRepository, ItemRepository>();
 builder.Services.AddTransient<IItemManager, ItemManager>();
 builder.Services.AddTransient<SoulTrees.Repositories.ILogger, Logger>();
 builder.Services.AddTransient<IDateTimeProvider, DateTimeProvider>();
+builder.Services.AddTransient<ISkillManager, SkillManager>();
+builder.Services.AddTransient<ISkillRepository, SkillRepository>();
 
 builder.Services.AddScoped<DialogService>();
 builder.Services.AddScoped<NotificationService>();
@@ -105,6 +111,9 @@ using (var scope = app.Services.CreateScope())
     var userManager = (UserManager<IdentityUser>)scope.ServiceProvider.GetService(typeof(UserManager<IdentityUser>));
     var admin = await userManager.FindByEmailAsync(builder.Configuration.GetSection("UserConfig").GetValue<string>("AdminEmail"));
     if (admin != null) await userManager.AddToRoleAsync(admin, "Admin");
+
+    var skillRepository = (ISkillRepository)scope.ServiceProvider.GetService(typeof(ISkillRepository));
+    skillRepository.RefreshSkills();
 }
 
 app.Run();

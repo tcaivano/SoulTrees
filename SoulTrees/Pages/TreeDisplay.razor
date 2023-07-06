@@ -27,69 +27,26 @@ else
 
 
     <div class="tree-container">
-        @foreach (var tree in _item.BaseTrees)
+
+        @foreach (var treeSet in _allTrees)
         {
-            <div class="tree">
-                <div>@tree.Type</div>
-                @foreach (var item in tree.Skills)
-                {
-                    <div class="skill-container @(item.IsEnabled ? "enabled" : "disabled") @(item.IsPurchased ? "isPurchased" : "")" @onclick="() => ToggleBuySkill(item)">
-                        <h5>@item.Name - @item.Cost Souls</h5>
-                        <div class="item" data-souls="@item.Cost">@((MarkupString)item.Description)</div>
-                    </div>
-                }
-            </div>
-        }
-        <br />
-        <br />
-        <br />
-        <br />
-        @foreach (var tree in _item.LowTrees)
-        {
-            <div class="tree">
-                <div>@tree.Type</div>
-                @foreach (var item in tree.Skills)
-                {
-                    <div class="skill-container @(item.IsEnabled ? "enabled" : "disabled") @(item.IsPurchased ? "isPurchased" : "")" @onclick="() => ToggleBuySkill(item)">
-                        <h5>@item.Name - @item.Cost Souls</h5>
-                        <div class="item" data-souls="@item.Cost">@((MarkupString)item.Description)</div>
-                    </div>
-                }
-            </div>
-        }
-        <br />
-        <br />
-        <br />
-        <br />
-        @foreach (var tree in _item.MidTrees)
-        {
-            <div class="tree">
-                <div>@tree.Type</div>
-                @foreach (var item in tree.Skills)
-                {
-                    <div class="skill-container @(item.IsEnabled ? "enabled" : "disabled") @(item.IsPurchased ? "isPurchased" : "")" @onclick="() => ToggleBuySkill(item)">
-                        <h5>@item.Name - @item.Cost Souls</h5>
-                        <div class="item" data-souls="@item.Cost">@((MarkupString)item.Description)</div>
-                    </div>
-                }
-            </div>
-        }
-        <br />
-        <br />
-        <br />
-        <br />
-        @foreach (var tree in _item.HighTrees)
-        {
-            <div class="tree">
-                <div>@tree.Type</div>
-                @foreach (var item in tree.Skills)
-                {
-                    <div class="skill-container @(item.IsEnabled ? "enabled" : "disabled") @(item.IsPurchased ? "isPurchased" : "")" @onclick="() => ToggleBuySkill(item)">
-                        <h5>@item.Name - @item.Cost Souls</h5>
-                        <div class="item" data-souls="@item.Cost">@((MarkupString)item.Description)</div>
-                    </div>
-                }
-            </div>
+            @foreach (var tree in treeSet)
+            {
+                <div class="tree">
+                    <div>@tree.Type</div>
+                    @foreach (var item in tree.Skills)
+                    {
+                        <div class="skill-container @(item.IsEnabled ? "enabled" : "disabled") @(item.IsPurchased ? "isPurchased" : "")" @onclick="() => ToggleBuySkill(item)">
+                            <h5>@item.Name - @item.Cost Souls</h5>
+                            <div class="item" data-souls="@item.Cost">@((MarkupString)item.Description)</div>
+                        </div>
+                    }
+                </div>
+            }
+            <br />
+            <br />
+            <br />
+            <br />
         }
     </div>
     <div class="footer">
@@ -109,12 +66,14 @@ else
     private Item _item;
     private int _totalSouls = 0;
     private int _neededSouls = 0;
+    private List<List<Tree>> _allTrees;
 
     protected override async Task OnInitializedAsync()
     {
         _item = await _itemManager.GetItem(Int32.Parse(Id));
         SetEnabledSkills();
         SetInitialTotal();
+        _allTrees = new List<List<Tree>>() { _item.BaseTrees, _item.LowTrees, _item.MidTrees, _item.HighTrees };
     }
 
     private void SetInitialTotal()
