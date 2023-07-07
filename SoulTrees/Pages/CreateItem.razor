@@ -73,12 +73,12 @@ else
                                 <RadzenHtmlEditor @bind-Value="subSkill.Description" />
                                 <br />
                                 Use Template:
-                                <InputSelect @bind-Value="subSkill.Description">
+                                <select @onchange="(e) => ApplyTemplate(e, subSkill)">
                                     @foreach (var template in _templates)
                                     {
-                                        <option value="@template.Description">@template.Name</option>
+                                        <option value="@template.Description @BREAKSTRING @template.Name" data-name="@template.Name">@template.Name</option>
                                     }
-                                </InputSelect>
+                                </select>
                                 <br />
                                 <br />
                                 Cost:
@@ -114,6 +114,8 @@ else
 
     private List<SkillTemplate> _templates;
     private List<List<Tree>> _allTrees;
+
+    private const string BREAKSTRING = "BananaBread";
 
     protected override async Task OnInitializedAsync()
     {
@@ -195,5 +197,13 @@ else
 
             treesToModify.Add(tree);
         }
+    }
+
+    private void ApplyTemplate(ChangeEventArgs e, Skill skill)
+    {
+        var valueString = e.Value.ToString();
+        var substrings = valueString.Split(BREAKSTRING);
+        skill.Description = substrings[0].Trim();
+        skill.Name = substrings[1].Trim();
     }
 }
